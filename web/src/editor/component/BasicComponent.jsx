@@ -1,0 +1,115 @@
+
+import { PropertyGroup, TextProperty, DisplayProperty, CheckBoxProperty } from '../../ui/index';
+import SetValueCommand from '../../command/SetValueCommand';
+import UnscaledText from '../../object/text/UnscaledText';
+import PointMarker from '../../object/mark/PointMarker';
+import global from '../../global';
+
+/**
+ * 基本信息组件
+ 
+ */
+class BasicComponent extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            show: false,
+            expanded: true,
+            name: '',
+            type: '',
+            visible: true
+        };
+
+        this.handleExpand = this.handleExpand.bind(this);
+        this.handleUpdate = this.handleUpdate.bind(this);
+        this.handleChangeName = this.handleChangeName.bind(this);
+        this.handleChangeVisible = this.handleChangeVisible.bind(this);
+    }
+
+    render() {
+        const { show, expanded, name, type, visible } = this.state;
+
+        if (!show) {
+            return null;
+        }
+
+        return <PropertyGroup title={_t('Basic Info')}
+            show={show}
+            expanded={expanded}
+            onExpand={this.handleExpand}
+               >
+            <DisplayProperty label={_t('Name')}
+                name={'name'}
+                value={name}
+                // onChange={this.handleChangeName}
+            />
+            <DisplayProperty label={_t('Type')}
+                name={'type'}
+                value={type}
+            />
+            <CheckBoxProperty label={_t('Visible')}
+                name={'visible'}
+                value={visible}
+                onChange={this.handleChangeVisible}
+            />
+        </PropertyGroup>;
+    }
+
+    componentDidMount() {
+        global.app.on(`objectSelected.BasicComponent`, this.handleUpdate);
+        global.app.on(`objectChanged.BasicComponent`, this.handleUpdate);
+    }
+
+    handleExpand(expanded) {
+        this.setState({
+            expanded
+        });
+    }
+
+    handleUpdate() {
+        const editor = global.app.editor;
+
+        if (!editor.selected) {
+            this.setState({
+                show: false
+            });
+            return;
+        }
+
+        this.selected = editor.selected;
+
+        this.setState({
+            show: true,
+            name: this.selected.name,
+            type: this.selected.constructor.name,
+            visible: this.selected.visible
+        });
+    }
+
+    handleChangeName(value) {
+        this.setState({
+            name: value
+        });
+
+        global.app.editor.execute(new SetValueCommand(this.selected, 'name', value));
+
+        // bug: https://gitee.com/tengge1/ShadowEditor/issues/IV1V3
+        if (this.selected instanceof UnscaledText || this.selected instanceof PointMarker) {
+            this.selected.setText(value);
+        }
+
+        global.app.call(`objectChanged`, this, this.selected);
+    }
+
+    handleChangeVisible(value) {
+        this.setState({
+            visible: value
+        });
+
+        this.selected.visible = value;
+        global.app.call(`objectChanged`, this, this.selected);
+    }
+}
+
+export default BasicComponent;

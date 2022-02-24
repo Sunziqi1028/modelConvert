@@ -1,0 +1,102 @@
+
+import './css/ChangePasswordWindow.css';
+import { Window, Content, Buttons, Form, FormControl, Label, Input, Button } from '../../ui/index';
+import global from '../../global';
+
+/**
+ * 修改密码窗口
+ 
+ */
+class ChangePasswordWindow extends React.Component {
+    constructor(props) {
+        super(props);
+
+        this.state = {
+            oldPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+        };
+
+        this.handleChange = this.handleChange.bind(this);
+        this.handleOK = this.handleOK.bind(this, props.callback);
+        this.handleClose = this.handleClose.bind(this);
+    }
+
+    render() {
+        const { oldPassword, newPassword, confirmPassword } = this.state;
+
+        return <Window
+            className={'ChangePasswordWindow'}
+            title={_t('Change Password')}
+            style={{ width: '400px', height: '240px' }}
+            mask={false}
+            onClose={this.handleClose}
+               >
+            <Content>
+                <Form>
+                    <FormControl>
+                        <Label>{_t('Old Password')}</Label>
+                        <Input name={'oldPassword'}
+                            type={'password'}
+                            value={oldPassword}
+                            onChange={this.handleChange}
+                        />
+                    </FormControl>
+                    <FormControl>
+                        <Label>{_t('New Password')}</Label>
+                        <Input name={'newPassword'}
+                            type={'password'}
+                            value={newPassword}
+                            onChange={this.handleChange}
+                        />
+                    </FormControl>
+                    <FormControl>
+                        <Label>{_t('Confirm Password')}</Label>
+                        <Input name={'confirmPassword'}
+                            type={'password'}
+                            value={confirmPassword}
+                            onChange={this.handleChange}
+                        />
+                    </FormControl>
+                </Form>
+            </Content>
+            <Buttons>
+                <Button onClick={this.handleOK}>{_t('OK')}</Button>
+                <Button onClick={this.handleClose}>{_t('Cancel')}</Button>
+            </Buttons>
+        </Window>;
+    }
+
+    handleChange(value, name) {
+        this.setState({
+            [name]: value
+        });
+    }
+
+    handleOK() {
+        const { oldPassword, newPassword, confirmPassword } = this.state;
+
+        fetch(`/api/User/ChangePassword`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: `OldPassword=${oldPassword}&NewPassword=${newPassword}&ConfirmPassword=${confirmPassword}`
+        }).then(response => {
+            response.json().then(obj => {
+                if (obj.Code !== 200) {
+                    global.app.toast(_t(obj.Msg), 'warn');
+                    return;
+                }
+                global.app.toast(_t(obj.Msg), 'success');
+                this.handleClose();
+            });
+        });
+    }
+
+    handleClose() {
+        global.app.removeElement(this);
+    }
+}
+
+export default ChangePasswordWindow;
