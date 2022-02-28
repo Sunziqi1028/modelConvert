@@ -27,3 +27,12 @@ type Model struct {
 	// Thumbnail
 	Thumbnail string
 }
+
+type IconModels struct {
+	IconId    int64      `gorm:"icon_id"`
+	IconName  string     `gorm:"icon_name"`
+	IconPath  string     `gorm:"icon_path"`
+	CreatedAt time.Time  `gorm:"created_at"`
+	UpdatedAt time.Time  `gorm:"updated_at"`
+	DeletedAt *time.Time `gorm:"deleted_at"`
+}

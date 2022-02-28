@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"shadoweditor/helper"
 	"shadoweditor/server"
@@ -76,6 +78,16 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer target.Close()
+
+	iconName := strings.Trim(targetPath, "public")
+	var NewModel IconModels
+	NewModel = IconModels{
+		IconName:  file.Filename,
+		IconPath:  iconName,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	mysql.Create(&NewModel)
 
 	source, err := file.Open()
 	if err != nil {
