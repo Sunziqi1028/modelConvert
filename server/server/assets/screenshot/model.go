@@ -28,8 +28,8 @@ type Model struct {
 	Thumbnail string
 }
 
-type IconModels struct {
-	IconId    int64      `gorm:"icon_id"`
+type FaIconModels struct {
+	IconId    int64      `gorm:"icon_id;primary_key;AUTO_INCREMENT"`
 	IconName  string     `gorm:"icon_name"`
 	IconPath  string     `gorm:"icon_path"`
 	CreatedAt time.Time  `gorm:"created_at"`

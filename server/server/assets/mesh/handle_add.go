@@ -40,8 +40,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	fileSize := file.Size
 	fileType := file.Header.Get("Content-Type")
 	fileExt := filepath.Ext(fileName)
-	fileNameWithoutExt := strings.TrimRight(fileName, fileExt)
-
+	fileNameWithoutExt := strings.TrimSuffix(fileName, fileExt)
 	if strings.ToLower(fileExt) != ".zip" {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,

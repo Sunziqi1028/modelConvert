@@ -79,9 +79,10 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	}
 	defer target.Close()
 
+	mysql.AutoMigrate(&FaIconModels{})
 	iconName := strings.Trim(targetPath, "public")
-	var NewModel IconModels
-	NewModel = IconModels{
+	var NewModel FaIconModels
+	NewModel = FaIconModels{
 		IconName:  file.Filename,
 		IconPath:  iconName,
 		CreatedAt: time.Now(),
