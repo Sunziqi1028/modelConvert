@@ -101,7 +101,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	defer source.Close()
 
 	if file.Filename == "top_icon.png" {
-		fmt.Println(file.Size, "===========")
 		img, _, err := image.Decode(source)
 		if err != nil {
 			helper.WriteJSON(w, server.Result{
