@@ -3,7 +3,6 @@ package mesh
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 
 	"shadoweditor/helper"
 	"shadoweditor/server"
-	"shadoweditor/server/tools/converter"
 )
 
 func init() {
@@ -41,12 +39,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	fileType := file.Header.Get("Content-Type")
 	fileExt := filepath.Ext(fileName)
 	fileNameWithoutExt := strings.TrimSuffix(fileName, fileExt)
-	if strings.ToLower(fileExt) != ".zip" {
-		helper.WriteJSON(w, server.Result{
-			Code: 300,
-			Msg:  "Only zip file is allowed!",
-		})
-	}
 
 	// save file
 	now := time.Now()
@@ -54,8 +46,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	savePath := fmt.Sprintf("/Upload/Model/%v", helper.TimeToString(now, "yyyyMMddHHmmss"))
 	physicalPath := server.MapPath(savePath)
 
-	tempPath := filepath.Join(physicalPath, "temp")
-
+	tempPath := filepath.Join(physicalPath, "gltf")
 	if _, err := os.Stat(tempPath); os.IsNotExist(err) {
 		os.MkdirAll(tempPath, 0755)
 	}
@@ -83,85 +74,9 @@ func Add(w http.ResponseWriter, r *http.Request) {
 
 	io.Copy(target, source)
 
-	helper.UnZip(targetPath, physicalPath)
-
-	os.RemoveAll(tempPath)
-
-	// justify file type
-	entryFileName := ""
-	outputFileName := ""
-	outputGltfFileName := ""
-	meshType := Unknown
-
-	infos, err := ioutil.ReadDir(physicalPath)
-	if err != nil {
-		helper.WriteJSON(w, server.Result{
-			Code: 300,
-			Msg:  err.Error(),
-		})
-		return
-	}
-
-	if len(infos) == 1 && infos[0].IsDir() {
-		physicalPath = filepath.Join(physicalPath, infos[0].Name())
-		savePath = filepath.Join(savePath, infos[0].Name())
-		infos, err = ioutil.ReadDir(physicalPath)
-		if err != nil {
-			helper.WriteJSON(w, server.Result{
-				Code: 300,
-				Msg:  err.Error(),
-			})
-			return
-		}
-	}
-
-	for _, info := range infos {
-		if info.IsDir() {
-			continue
-		}
-		fileName := info.Name()
-		fileExt := filepath.Ext(fileName)
-		fileNameWithoutExt := strings.TrimRight(fileName, fileExt)
-		outputFileName = fileNameWithoutExt + ".obj"
-		outputGltfFileName = fileNameWithoutExt + ".gltf"
-		entryFileName = info.Name()
-		if strings.HasSuffix(strings.ToLower(info.Name()), ".3ds") {
-			// entryFileName = fmt.Sprintf("%v/%v", savePath, info.Name())
-			meshType = ThreeDs
-			break
-		} else if strings.HasSuffix(strings.ToLower(info.Name()), ".gltf") {
-			// entryFileName = fmt.Sprintf("%v/%v", savePath, info.Name())
-			meshType = Gltf
-			break
-		} else if strings.HasSuffix(strings.ToLower(info.Name()), ".fbx") {
-			// entryFileName = fmt.Sprintf("%v/%v", savePath, info.Name())
-			meshType = Fbx
-			break
-		} else if strings.HasSuffix(strings.ToLower(info.Name()), ".glb") {
-			// entryFileName = fmt.Sprintf("%v/%v", savePath, info.Name())
-			meshType = Glb
-			break
-		} else if strings.HasSuffix(strings.ToLower(info.Name()), ".obj") {
-			// entryFileName = fmt.Sprintf("%v/%v", savePath, info.Name())
-			meshType = Obj
-			break
-		}
-	}
-	if meshType == Unknown {
-		// os.RemoveAll(physicalPath)
-		helper.WriteJSON(w, server.Result{
-			Code: 300,
-			Msg:  "Unknown file type!",
-		})
-		return
-	}
-
-	fmt.Println(outputFileName)
-
 	// save to mongo
 	pinyin := helper.ConvertToPinYin(fileNameWithoutExt)
-	converter := converter.NewConverter("")
-	_, err = converter.ConvertToOBJ(physicalPath, entryFileName, outputFileName, outputGltfFileName)
+
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -169,8 +84,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	url := filepath.Join(savePath, "gltf", outputGltfFileName)
-
+	url := filepath.Join(savePath, "gltf", fileName)
 	model := Model{
 		AddTime:     now,
 		FileName:    fileName,
