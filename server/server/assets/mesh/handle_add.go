@@ -40,6 +40,13 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	fileExt := filepath.Ext(fileName)
 	fileNameWithoutExt := strings.TrimSuffix(fileName, fileExt)
 
+	if strings.ToLower(fileExt) != ".zip" {
+		helper.WriteJSON(w, server.Result{
+			Code: 300,
+			Msg:  "Only zip file is allowed",
+		})
+	}
+
 	// save file
 	now := time.Now()
 
@@ -50,8 +57,9 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	if _, err := os.Stat(tempPath); os.IsNotExist(err) {
 		os.MkdirAll(tempPath, 0755)
 	}
-
+	fmt.Println("physicalPath:", physicalPath)
 	targetPath := filepath.Join(tempPath, fileName)
+	fmt.Println("targetPath:", targetPath)
 	target, err := os.Create(targetPath)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
@@ -73,8 +81,10 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	defer source.Close()
 
 	io.Copy(target, source)
-
+	fmt.Println("tempPath:", tempPath)
+	helper.UnZip(targetPath, tempPath)
 	// save to mongo
+	os.Remove(targetPath)
 	pinyin := helper.ConvertToPinYin(fileNameWithoutExt)
 
 	if err != nil {
@@ -84,7 +94,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	url := filepath.Join(savePath, "gltf", fileName)
+	url := filepath.Join(savePath, "gltf", fmt.Sprintf("%s.gltf", fileNameWithoutExt))
 	model := Model{
 		AddTime:     now,
 		FileName:    fileName,
