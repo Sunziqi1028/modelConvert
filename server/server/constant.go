@@ -240,4 +240,6 @@ const (
 	EditVideo Authority = "EDIT_VIDEO"
 	// DeleteVideo means the user can delete video who uploaded.
 	DeleteVideo Authority = "DELETE_VIDEO"
+	// GET MODEL ID
+	GetModelId Authority = "GET_MODEL_ID"
 )
