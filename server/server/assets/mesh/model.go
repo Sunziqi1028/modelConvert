@@ -11,6 +11,8 @@ type Model struct {
 	gorm.Model
 	// Name
 	Name string
+	// ModelID
+	ModelID int64
 	// Category ID
 	CategoryID string
 	// Category Name
