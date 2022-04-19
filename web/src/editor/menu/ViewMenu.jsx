@@ -40,10 +40,10 @@ class ViewMenu extends React.Component {
         const { assetsPanelShow, sidebarShow, toolbarShow, statusBarShow, showStats, showGrid, showViewHelper, enablePhysics, isThrowBall } = this.state;
 
         return <MenuItem title={_t('View')}>
-//             <MenuItem title={_t('Assets Panel')}
-//                 checked={assetsPanelShow}
-//                 onClick={this.handleShowAssetsPanel}
-//             />
+           {/* <MenuItem title={_t('Assets Panel')} */}
+                {/* checked={assetsPanelShow} */}
+                {/* onClick={this.handleShowAssetsPanel} */}
+            {/* /> */}
             <MenuItem title={_t('Sidebar')}
                 checked={sidebarShow}
                 onClick={this.handleShowSidebar}
