@@ -12,7 +12,7 @@ const (
 	// MaterialCollectionName is the collection name that we store materials in mongo.
 	MaterialCollectionName string = "_Material"
 	// MaterialTypeCollectionName is the collection name that we store materials type in mongo.
-	MaterialTypeCollectionName string = "material_type"
+	MaterialTypeCollectionName string = "fa_material_type"
 	// AudioCollectionName is the collection name that we store audios in mongo.
 	AudioCollectionName string = "_Audio"
 	// AnimationCollectionName is the collection name that we store animations in mongo.
