@@ -32,6 +32,7 @@ type Material struct {
 	Metalness           float64 `json:"metalness,omitempty"`
 	Opacity             float64 `json:"opacity,omitempty"`
 	Index               int     `json:"_,omitempty"`
+	//ModelId 			int64   `json:"model_id,omitempty"`
 }
 
 // ResultMaterial .

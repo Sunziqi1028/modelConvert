@@ -6,7 +6,7 @@ const (
 	// SceneCollectionName is the collection name that we store scenes in mongo.
 	SceneCollectionName string = "_Scene"
 	// MeshCollectionName is the collection name that we store meshes in mongo.
-	MeshCollectionName string = "mesh"
+	MeshCollectionName string = "fa_mesh"
 	// MapCollectionName is the collection name that we store textures in mongo.
 	MapCollectionName string = "_Map"
 	// MaterialCollectionName is the collection name that we store materials in mongo.
@@ -240,6 +240,6 @@ const (
 	EditVideo Authority = "EDIT_VIDEO"
 	// DeleteVideo means the user can delete video who uploaded.
 	DeleteVideo Authority = "DELETE_VIDEO"
-	// GET MODEL ID
+	// GET MODEL Id
 	GetModelId Authority = "GET_MODEL_ID"
 )

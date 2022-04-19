@@ -10,12 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"shadoweditor/helper"
 	"shadoweditor/server"
 	"shadoweditor/server/assets/mesh"
 
-	"github.com/disintegration/imaging"
+	"github.com/nfnt/resize"
 )
 
 func init() {
@@ -39,13 +41,13 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	file := files["file"][0]
 
 	id := r.FormValue("id")
-	widthStr := r.FormValue("width")
-	heightStr := r.FormValue("height")
+	//widthStr := r.FormValue("width")
+	//heightStr := r.FormValue("height")
 	// string to float
-	widthF, _ := strconv.ParseFloat(widthStr, 64)
-	heightF, _ := strconv.ParseFloat(heightStr, 64)
-	width := widthF * 28.346
-	height := heightF * 28.346
+	//widthF, _ := strconv.ParseFloat(widthStr, 64)
+	//heightF, _ := strconv.ParseFloat(heightStr, 64)
+	//width := widthF * 1
+	//height := heightF * 1
 
 	mysql := server.Mysql()
 	doc := mesh.Model{}
@@ -77,6 +79,17 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	}
 	defer target.Close()
 
+	mysql.AutoMigrate(&FaIconModels{})
+	iconName := strings.Trim(targetPath, "public")
+	var NewModel FaIconModels
+	NewModel = FaIconModels{
+		IconName:  file.Filename,
+		IconPath:  iconName,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	go mysql.Create(&NewModel)
+
 	source, err := file.Open()
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
@@ -96,17 +109,18 @@ func Add(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
-		img2, err := ImageCopy(img)
-		if err != nil {
-			helper.WriteJSON(w, server.Result{
-				Code: 300,
-				Msg:  err.Error(),
-			})
-			return
-		}
-		dstImage := imaging.Resize(img2, int(width), int(height), imaging.NearestNeighbor)
+		img2 := resize.Resize(0, 0, img, resize.Lanczos3)
+		//img2, err := ImageCopy(img)
+		//if err != nil {
+		//	helper.WriteJSON(w, server.Result{
+		//		Code: 300,
+		//		Msg:  err.Error(),
+		//	})
+		//	return
+		//}
+		//dstImage := imaging.Resize(img, int(width), int(height), imaging.NearestNeighbor)
 		// img2 to file
-		err = png.Encode(target, dstImage)
+		err = png.Encode(target, img2)
 	} else {
 		io.Copy(target, source)
 	}
