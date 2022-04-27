@@ -111,8 +111,15 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	physicalPath := server.MapPath(doc.SavePath)
-	targetPath := filepath.Join(physicalPath+"/gltf", file.Filename)
+
+	gltfSavePath := filepath.Dir(doc.URL)
+	physicalPath := server.MapPath(gltfSavePath)
+	tempDir := strings.Split(gltfSavePath, "/")
+	tempPath := server.Config.Path.PublicDir + "/" + tempDir[0]
+	if _, err := os.Stat(physicalPath); os.IsNotExist(err) {
+		os.MkdirAll(physicalPath, 0755)
+	}
+	targetPath := filepath.Join(physicalPath, "model.gltf")
 	target, err := os.Create(targetPath)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
@@ -159,7 +166,7 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	model, err := gltf.Open("public/" + doc.URL)
+	model, err := gltf.Open(targetPath)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -223,19 +230,18 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return images[i].Index < images[j].Index
 	})
 
-	savePath := server.MapPath(doc.SavePath)
 	jsonFile := map[string]interface{}{
 		"positions":  resultPositions,
 		"materials":  images,
 		"export_map": exportMap,
 	}
 	// check if the file exists.
-	_, err = os.Stat(physicalPath + "/gltf/" + "icon.png")
+	_, err = os.Stat(physicalPath + "icon.png")
 	if err == nil {
 		jsonFile["icon"] = "icon.png"
 	}
 	// check if the file exists.
-	_, err = os.Stat(physicalPath + "/gltf/" + "top_icon.png")
+	_, err = os.Stat(physicalPath + "top_icon.png")
 	if err == nil {
 		jsonFile["top_icon"] = "top_icon.png"
 	}
@@ -248,7 +254,7 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// save jsonString to savePath.
-	err = helper.SaveFile(savePath+"/gltf/info.json", jsonString)
+	err = helper.SaveFile(physicalPath+"/info.json", jsonString)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -257,9 +263,9 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
-	destFile := fmt.Sprintf(doc.SavePath+"/%v.zip", now)
+	destFile := fmt.Sprintf(gltfSavePath+"/%v.zip", now)
 	descPhysicalFile := server.MapPath(destFile)
-	err = helper.Zip2(savePath+"/gltf", descPhysicalFile)
+	err = helper.Zip2(physicalPath, descPhysicalFile)
 	if err != nil {
 		fmt.Println(err)
 		helper.WriteJSON(w, server.Result{
@@ -271,8 +277,23 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	result := map[string]interface{}{
 		"path": destFile,
 	}
-
-	mysql.Table(server.MeshCollectionName).Where("id = ?", _id).Updates(result)
+	unUserSpace := calUnusedSpace(doc.ModelID)
+	desFile, _ := os.Stat(descPhysicalFile)
+	remotePath := server.Config.CSServer.Path + gltfSavePath
+	if unUserSpace > desFile.Size() {
+		err := helper.TransferModelFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, descPhysicalFile, remotePath, server.Config.CSServer.Port)
+		if err != nil {
+			helper.WriteJSON(w, server.Result{
+				Code: 500,
+				Msg:  "上传云空间失败!",
+			})
+		} else {
+			fmt.Println(tempPath)
+			err := os.RemoveAll(tempPath)
+			fmt.Println("handle_export.go 292:", err)
+		}
+	}
+	//mysql.Table(server.MeshCollectionName).Where("id = ?", _id).Updates(result)
 
 	helper.WriteJSON(w, server.Result{
 		Code: 200,

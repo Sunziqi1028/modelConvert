@@ -32,3 +32,10 @@ log_dir = "./logs"                          # The directory that contains log fi
 
 [log]
 file = "./logs/ShadowEditor.txt"
+
+[cloudSpaceServer]
+address = "120.26.81.101"
+port = 22
+username = "root"
+password = "Miaoxiang@996"
+path = "/home/cloudSpace/"  # The path of cloudSpace

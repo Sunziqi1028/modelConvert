@@ -61,9 +61,9 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	physicalPath := server.MapPath(doc.SavePath)
-	targetPath := filepath.Join(physicalPath, "gltf", file.Filename)
+	iconPath := filepath.Dir(doc.URL)
+	physicalPath := server.MapPath(iconPath)
+	targetPath := filepath.Join(physicalPath, file.Filename)
 
 	if _, err := os.Stat(physicalPath); os.IsNotExist(err) {
 		os.MkdirAll(physicalPath, 0755)
@@ -85,6 +85,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	NewModel = FaIconModels{
 		IconName:  file.Filename,
 		IconPath:  iconName,
+		ModelID:   doc.ModelID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

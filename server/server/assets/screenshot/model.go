@@ -32,6 +32,7 @@ type FaIconModels struct {
 	IconId    int64      `gorm:"icon_id;primary_key;AUTO_INCREMENT"`
 	IconName  string     `gorm:"icon_name"`
 	IconPath  string     `gorm:"icon_path"`
+	ModelID   int64      `gorm:"model_id"`
 	CreatedAt time.Time  `gorm:"created_at"`
 	UpdatedAt time.Time  `gorm:"updated_at"`
 	DeletedAt *time.Time `gorm:"deleted_at"`

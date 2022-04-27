@@ -60,6 +60,7 @@ type ConfigModel struct {
 	Upload    UploadConfigModel    `toml:"upload"`
 	Path      PathConfigModel      `toml:"path"`
 	Log       LogConfigModel       `toml:"log"`
+	CSServer  CloudSpaceServer     `toml:"cloudSpaceServer"`
 }
 
 // ServerConfigModel is the server config section in `config.toml`.
@@ -111,4 +112,13 @@ type PathConfigModel struct {
 // LogConfigModel is the log config section in `config.toml`.
 type LogConfigModel struct {
 	File string `toml:"file"`
+}
+
+// CloudSpaceServer is the info of cloud-space-server
+type CloudSpaceServer struct {
+	Address  string `toml:"address"`
+	Port     int    `toml:"port"`
+	UserName string `toml:"username"`
+	Password string `toml:"password"`
+	Path     string `toml:"path"'`
 }
