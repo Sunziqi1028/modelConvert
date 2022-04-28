@@ -78,7 +78,7 @@ func getUsedSpace(modelId int64) (totalUseNumber int64, err error) {
 func getBrandID(modelId int64) (brandId int64, err error) {
 	mysql := server.Mysql()
 	newModel := NewModels{}
-	err = mysql.Table("fa_new_models").Where("id = ?", modelId).Find(&newModel).Error
+	err = mysql.Table("fa_new_models_audit").Where("id = ?", modelId).Find(&newModel).Error
 	if err != nil {
 		return 0, errors.New("查询模型ID失败！")
 	}
