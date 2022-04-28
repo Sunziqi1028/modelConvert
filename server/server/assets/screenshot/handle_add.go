@@ -340,7 +340,7 @@ func ImageCopy(src image.Image) (image.Image, error) {
 func updateIconInfo(count, brandID, modelId, size int64, url string, newIconModel *model.FaIconModels) error {
 	mysql := server.Mysql()
 	if count > 0 {
-		err := mysql.Table("fa_icon_models").Select("*").Where("model_id = ?", modelId).UpdateColumns(newIconModel).Error
+		err := mysql.Table("fa_icon_models").Where("model_id = ?", modelId).Updates(newIconModel).Error
 		if err != nil {
 			return errors.New("更新icon数据失败")
 		}
