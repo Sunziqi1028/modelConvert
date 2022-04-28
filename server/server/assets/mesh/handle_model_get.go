@@ -3,6 +3,7 @@ package mesh
 import (
 	"fmt"
 	"net/http"
+	"shadoweditor/server/assets/model"
 	"strconv"
 
 	"shadoweditor/helper"
@@ -21,7 +22,7 @@ func ModelId(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	list := Model{}
+	list := model.MeshModel{}
 	mysql := server.Mysql()
 	err = mysql.Table(server.MeshCollectionName).Where("model_id = ?", modelId).First(&list).Error
 	if err != nil {

@@ -7,13 +7,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"shadoweditor/helper"
+	"shadoweditor/server"
+	mModel "shadoweditor/server/assets/model"
+	"shadoweditor/server/assets/screenshot"
+	"shadoweditor/server/utils"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
-
-	"shadoweditor/helper"
-	"shadoweditor/server"
 
 	"github.com/amorist/gltf"
 )
@@ -100,7 +101,7 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	file := files["file"][0]
 	id := r.FormValue("id")
 	mysql := server.Mysql()
-	doc := Model{}
+	doc := mModel.MeshModel{}
 	_id, _ := strconv.Atoi(id)
 	err = mysql.Table(server.MeshCollectionName).Where("id = ?", _id).First(&doc).Error
 	fmt.Println("doc.Name", doc.Name)
@@ -262,8 +263,8 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
-	destFile := fmt.Sprintf(gltfSavePath+"/%v.zip", now)
+	//now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
+	destFile := gltfSavePath + "/export.zip"
 	descPhysicalFile := server.MapPath(destFile)
 	err = helper.Zip2(physicalPath, descPhysicalFile)
 	if err != nil {
@@ -277,9 +278,17 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	result := map[string]interface{}{
 		"path": destFile,
 	}
-	unUserSpace := calUnusedSpace(doc.ModelID)
-	desFile, _ := os.Stat(descPhysicalFile)
+	unUserSpace := utils.CalUnusedSpace(doc.ModelID)
+	var desFile, _ = os.Stat(descPhysicalFile)
 	remotePath := server.Config.CSServer.Path + gltfSavePath
+	brandID, err := utils.GetBrandID(doc.ModelID)
+	//url := strings.TrimPrefix(targetPath, "pubilc/")
+	newBrandFileLog := mModel.BrandFileLog{
+		Url:     destFile,
+		BrandId: brandID,
+		Size:    desFile.Size(),
+		Status:  screenshot.NORMAL,
+	}
 	if unUserSpace > desFile.Size() {
 		err := helper.TransferModelFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, descPhysicalFile, remotePath, server.Config.CSServer.Port)
 		if err != nil {
@@ -288,12 +297,32 @@ func Export(w http.ResponseWriter, r *http.Request) {
 				Msg:  "上传云空间失败!",
 			})
 		} else {
-			fmt.Println(tempPath)
-			err := os.RemoveAll(tempPath)
-			fmt.Println("handle_export.go 292:", err)
+			var count int64
+			err := mysql.Table("fa_brand_file_log").Count(&count).Where("url = ?", destFile).Error
+			if err != nil {
+				fmt.Println("获取品牌ID失败， err", err)
+				helper.WriteJSON(w, server.Result{
+					Code: 300,
+					Msg:  err.Error(),
+				})
+				return
+			}
+			if count > 0 {
+				mysql.Table("fa_brand_file_log").Where("url = ?", destFile).Update("status", screenshot.DELETE)
+				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+			} else {
+				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+			}
+			useSpace, _ := utils.GetUsedSpace(doc.ModelID)
+			storeSize, err := utils.GetBrandFileLog(targetPath)
+			if err != nil {
+				fmt.Println(err)
+			}
+			totalUseSpace := useSpace - storeSize + desFile.Size()
+			mysql.Table("fa_brand_space").Where("brand_id", brandID).Update("use_number", totalUseSpace)
+			err = os.RemoveAll(tempPath)
 		}
 	}
-	//mysql.Table(server.MeshCollectionName).Where("id = ?", _id).Updates(result)
 
 	helper.WriteJSON(w, server.Result{
 		Code: 200,

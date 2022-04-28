@@ -1,4 +1,4 @@
-package mesh
+package model
 
 import (
 	"time"
@@ -20,7 +20,7 @@ const (
 )
 
 // Model is mesh model.
-type Model struct {
+type MeshModel struct {
 	gorm.Model
 	// Name
 	Name string

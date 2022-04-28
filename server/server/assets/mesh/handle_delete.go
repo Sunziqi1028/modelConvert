@@ -3,6 +3,7 @@ package mesh
 import (
 	"net/http"
 	"os"
+	"shadoweditor/server/assets/model"
 	"strconv"
 
 	"shadoweditor/helper"
@@ -19,7 +20,7 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("ID")
 	_id, _ := strconv.Atoi(id)
 	mysql := server.Mysql()
-	doc := Model{}
+	doc := model.MeshModel{}
 	err := mysql.Table(server.MeshCollectionName).Where("id = ?", _id).First(&doc).Error
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
@@ -33,7 +34,7 @@ func Delete(w http.ResponseWriter, r *http.Request) {
 	physicalPath := server.MapPath(path)
 	os.RemoveAll(physicalPath)
 
-	mysql.Table(server.MeshCollectionName).Delete(&Model{}, "id = ?", _id)
+	mysql.Table(server.MeshCollectionName).Delete(&model.MeshModel{}, "id = ?", _id)
 
 	helper.WriteJSON(w, server.Result{
 		Code: 200,

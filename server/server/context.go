@@ -98,7 +98,6 @@ func MapPath(path string) string {
 		path = "/" + path
 	}
 	path = filepath.Join(Config.Path.PublicDir, path)
-	fmt.Println("context.go --101:", path)
 	return strings.ReplaceAll(path, "/", string(filepath.Separator))
 }
 
