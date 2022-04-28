@@ -1,5 +1,5 @@
 [server]
-port = ":2021"                              # server address
+port = ":2022"                              # server address
 https = false                               # whether enable https
 certPath = "./certificate/certificate.pem"  # The certificate path
 keyPath = "./certificate/privatekey.pem"    # The key path
@@ -13,7 +13,7 @@ password = ""                               # mongo password
 database = "ShadowEditor"                   # mongo database name
 
 [mysql]
-uri = "root:872361@tcp(127.0.0.1:3306)/ShadowEditor?charset=utf8mb4&parseTime=True&loc=Local"
+uri = "root:miaoxiangtest@root@tcp(120.26.47.168:3306)/new_fastadmin?charset=utf8mb4&parseTime=True&loc=Local"
 max_open_conns = 20
 max_idle_conns = 10
 
