@@ -67,7 +67,9 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	}
 	iconPath := filepath.Dir(doc.URL)
 	physicalPath := server.MapPath(iconPath)
-	targetPath := filepath.Join(physicalPath, file.Filename)
+	now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
+	fileName := now + "_" + file.Filename
+	targetPath := filepath.Join(physicalPath, fileName)
 
 	if _, err := os.Stat(physicalPath); os.IsNotExist(err) {
 		os.MkdirAll(physicalPath, 0755)
@@ -86,8 +88,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	mysql.AutoMigrate(&model.FaIconModels{})
 	iconPathTemp := strings.Trim(targetPath, "public/")
 	var NewModel model.FaIconModels
-	var counts int64
-	err = mysql.Table("fa_icon_models").Count(&counts).Where("model_id = ?", doc.ModelID).Error
 	brandID, err := utils.GetBrandID(doc.ModelID)
 	if err != nil {
 		fmt.Println("获取品牌ID失败， err", err)
@@ -111,7 +111,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		NewModel = model.FaIconModels{
 			IconName:    "",
 			IconPath:    "",
-			TopIconName: file.Filename,
+			TopIconName: fileName,
 			TopIconPath: iconPathTemp,
 			ModelID:     doc.ModelID,
 			CreatedAt:   time.Now(),
@@ -138,13 +138,21 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		// img2 to file
 		err = png.Encode(target, img2)
 		if err == nil {
-			fmt.Println("counts:", counts)
-			go updateIconInfo(counts, brandID, doc.ModelID, size, iconPathTemp, &NewModel)
-			fmt.Println("add.go 139:", NewModel)
+			var topIconPath string
+			mysql.Table("fa_icon_models").Select("top_icon_path").Where("model_id = ?", doc.ModelID).Find(&topIconPath)
+			if len(topIconPath) == 0 {
+				mysql.Table("fa_icon_models").Where("model_id = ?", doc.ModelID).Updates(&NewModel)
+				createBrandFileLog(brandID, size, iconPathTemp)
+			} else {
+				remoteDelPath := server.Config.CSServer.Path + topIconPath
+				mysql.Table("fa_icon_models").Where("model_id = ?", doc.ModelID).Updates(model.FaIconModels{TopIconName: fileName, TopIconPath: iconPathTemp})
+				updateBrandFileLog(brandID, size, iconPathTemp, topIconPath, remoteDelPath)
+			}
 		}
 	} else {
+		io.Copy(target, source)
 		NewModel = model.FaIconModels{
-			IconName:    file.Filename,
+			IconName:    fileName,
 			IconPath:    iconPathTemp,
 			TopIconName: "",
 			TopIconPath: "",
@@ -152,15 +160,19 @@ func Add(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
-		fmt.Println("add.go 151:", NewModel)
-		io.Copy(target, source)
-		go updateIconInfo(counts, brandID, doc.ModelID, size, iconPathTemp, &NewModel)
+		var iconPath string
+		mysql.Table("fa_icon_models").Select("icon_path").Where("model_id = ?", doc.ModelID).Find(&iconPath)
+		if len(iconPath) == 0 {
+			mysql.Table("fa_icon_models").Create(&NewModel)
+			createBrandFileLog(brandID, size, iconPathTemp)
+		} else {
+			remoteDelPath := server.Config.CSServer.Path + iconPath
+			mysql.Table("fa_icon_models").Where("model_id = ?", doc.ModelID).Updates(model.FaIconModels{IconName: fileName, IconPath: iconPathTemp})
+			updateBrandFileLog(brandID, size, iconPathTemp, iconPath, remoteDelPath)
+		}
 	}
 	tempIconPath := filepath.Dir(doc.URL)
 	remotePath := server.Config.CSServer.Path + tempIconPath
-	//tempDir := strings.Split(tempIconPath, "/")
-	//tempPath := server.Config.Path.PublicDir + "/" + tempDir[0]
-	fmt.Println("tempIconPath:", tempIconPath, "----", "remotePath", remotePath, "----", "targetPath", targetPath)
 	unUserSpace := utils.CalUnusedSpace(doc.ModelID)
 	if unUserSpace > size {
 		helper.TransferModelFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, targetPath, remotePath, server.Config.CSServer.Port)
@@ -170,6 +182,12 @@ func Add(w http.ResponseWriter, r *http.Request) {
 				Msg:  "上传云空间失败!",
 			})
 		}
+	} else {
+		helper.WriteJSON(w, server.Result{
+			Code: 500,
+			Msg:  "fail!",
+			Data: "云空间内存不足，请购买！",
+		})
 	}
 
 	useSpace, _ := utils.GetUsedSpace(doc.ModelID)
@@ -337,34 +355,30 @@ func ImageCopy(src image.Image) (image.Image, error) {
 // 	return Bitmap.createBitmap(bitmap, x, y, w, h);
 // }
 
-func updateIconInfo(count, brandID, modelId, size int64, url string, newIconModel *model.FaIconModels) error {
+func updateBrandFileLog(brandID, size int64, url, delPath, remoteDelPath string) error {
 	mysql := server.Mysql()
-	if count > 0 {
-		err := mysql.Table("fa_icon_models").Where("model_id = ?", modelId).Updates(newIconModel).Error
-		if err != nil {
-			return errors.New("更新icon数据失败")
-		}
-
-		mysql.Table("fa_brand_file_log").Where("url", url).Update("status", DELETE)
-		newBrandFileLog := model.BrandFileLog{
-			BrandId: brandID,
-			Url:     url,
-			Size:    size,
-			Status:  NORMAL,
-		}
-		mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
-	} else {
-		err := mysql.Table("fa_icon_models").Create(newIconModel).Error
-		if err != nil {
-			return errors.New("插入icon数据失败")
-		}
-		newBrandFileLog := model.BrandFileLog{
-			BrandId: brandID,
-			Url:     url,
-			Size:    size,
-			Status:  NORMAL,
-		}
-		mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+	mysql.Table("fa_brand_file_log").Where("url = ? and brand_id = ?", delPath, brandID).Update("status", DELETE)
+	newBrandFileLog := model.BrandFileLog{
+		BrandId: brandID,
+		Url:     url,
+		Size:    size,
+		Status:  NORMAL,
+	}
+	mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+	err := helper.DeleteRemoteFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, remoteDelPath, server.Config.CSServer.Port)
+	if err != nil {
+		return errors.New("删除云空间文件失败")
 	}
 	return nil
+}
+
+func createBrandFileLog(brandID, size int64, url string) {
+	mysql := server.Mysql()
+	newBrandFileLog := model.BrandFileLog{
+		BrandId: brandID,
+		Url:     url,
+		Size:    size,
+		Status:  NORMAL,
+	}
+	mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
 }

@@ -80,7 +80,6 @@ func GetBrandID(modelId int64) (brandId int64, err error) {
 	mysql := server.Mysql()
 	newModel := model.NewModels{}
 	err = mysql.Table("fa_new_models_audit").Where("model_id = ?", modelId).Order("update_time").Limit(1).Find(&newModel).Error
-	fmt.Println("cal.go 82:", modelId, "-----", newModel)
 	if err != nil {
 		return 0, errors.New("查询模型ID失败！")
 	}
@@ -91,7 +90,6 @@ func GetBrandID(modelId int64) (brandId int64, err error) {
 func getPurchaseCloudSpace(modelId int64) (number []int64, err error) {
 	mysql := server.Mysql()
 	brandID, err := GetBrandID(modelId)
-	fmt.Println("cal.go:92", modelId, "----", brandID)
 	if err != nil {
 		fmt.Println("获取品牌ID失败， err", err)
 		return nil, err

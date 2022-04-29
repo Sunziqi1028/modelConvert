@@ -83,3 +83,15 @@ func TransferModelFile(user, password, address, localFilePath, remoteDir string,
 	}
 	return nil
 }
+
+func DeleteRemoteFile(user, password, address, remoteFilePath string, port int) error {
+	sftpClient, err := connect(user, password, address, port)
+	if err != nil {
+		return errors.New("建立远程ssh客户端失败！")
+	}
+	err = sftpClient.Remove(remoteFilePath)
+	if err != nil {
+		return errors.New("删除远程文件失败！")
+	}
+	return nil
+}

@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/amorist/gltf"
 )
@@ -104,7 +105,6 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	doc := mModel.MeshModel{}
 	_id, _ := strconv.Atoi(id)
 	err = mysql.Table(server.MeshCollectionName).Where("id = ?", _id).First(&doc).Error
-	fmt.Println("doc.Name", doc.Name)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -263,8 +263,8 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	//now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
-	destFile := gltfSavePath + "/export.zip"
+	now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
+	destFile := fmt.Sprintf(gltfSavePath+"/%v.zip", now)
 	descPhysicalFile := server.MapPath(destFile)
 	err = helper.Zip2(physicalPath, descPhysicalFile)
 	if err != nil {
@@ -297,32 +297,39 @@ func Export(w http.ResponseWriter, r *http.Request) {
 				Msg:  "上传云空间失败!",
 			})
 		} else {
-			var count int64
-			err := mysql.Table("fa_brand_file_log").Count(&count).Where("url = ?", destFile).Error
-			if err != nil {
-				fmt.Println("获取品牌ID失败， err", err)
-				helper.WriteJSON(w, server.Result{
-					Code: 300,
-					Msg:  err.Error(),
-				})
-				return
-			}
-			if count > 0 {
-				mysql.Table("fa_brand_file_log").Where("url = ?", destFile).Update("status", screenshot.DELETE)
+			var zipPath string
+			mysql.Table("fa_mesh").Select("zip_path").Where("model_id = ?", doc.ModelID).Find(&zipPath)
+			if len(zipPath) == 0 {
+				mysql.Table("fa_mesh").Where("model_id = ?", doc.ModelID).Update("zip_path", destFile)
 				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
 			} else {
+				remoteDeleteFilePath := server.Config.CSServer.Path + zipPath
+				mysql.Table("fa_mesh").Where("model_id = ?", doc.ModelID).Update("zip_path", destFile)
+				mysql.Table("fa_brand_file_log").Where("url = ? and brand_id = ?", zipPath, brandID).Update("status", screenshot.DELETE)
 				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+				err = helper.DeleteRemoteFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, remoteDeleteFilePath, server.Config.CSServer.Port)
+				if err == nil {
+					fmt.Println("云空间文件删除成功~")
+				}
 			}
-			useSpace, _ := utils.GetUsedSpace(doc.ModelID)
-			storeSize, err := utils.GetBrandFileLog(targetPath)
-			if err != nil {
-				fmt.Println(err)
-			}
-			totalUseSpace := useSpace - storeSize + desFile.Size()
-			mysql.Table("fa_brand_space").Where("brand_id", brandID).Update("use_number", totalUseSpace)
-			err = os.RemoveAll(tempPath)
 		}
+	} else {
+		helper.WriteJSON(w, server.Result{
+			Code: 500,
+			Msg:  "fail!",
+			Data: "云空间内存不足，请购买！",
+		})
 	}
+	os.RemoveAll(tempPath)
+	fmt.Println("本地文件删除成功~")
+
+	useSpace, _ := utils.GetUsedSpace(doc.ModelID)
+	storeSize, err := utils.GetBrandFileLog(targetPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	totalUseSpace := useSpace - storeSize + desFile.Size()
+	mysql.Table("fa_brand_space").Where("brand_id", brandID).Update("use_number", totalUseSpace)
 
 	helper.WriteJSON(w, server.Result{
 		Code: 200,
