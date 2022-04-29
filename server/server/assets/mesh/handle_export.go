@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"shadoweditor/helper"
+	"shadoweditor/server"
+	mModel "shadoweditor/server/assets/model"
+	"shadoweditor/server/assets/screenshot"
+	"shadoweditor/server/utils"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-
-	"shadoweditor/helper"
-	"shadoweditor/server"
 
 	"github.com/amorist/gltf"
 )
@@ -100,10 +102,9 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	file := files["file"][0]
 	id := r.FormValue("id")
 	mysql := server.Mysql()
-	doc := Model{}
+	doc := mModel.MeshModel{}
 	_id, _ := strconv.Atoi(id)
 	err = mysql.Table(server.MeshCollectionName).Where("id = ?", _id).First(&doc).Error
-	fmt.Println("doc.Name", doc.Name)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -111,8 +112,15 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	physicalPath := server.MapPath(doc.SavePath)
-	targetPath := filepath.Join(physicalPath+"/gltf", file.Filename)
+
+	gltfSavePath := filepath.Dir(doc.URL)
+	physicalPath := server.MapPath(gltfSavePath)
+	tempDir := strings.Split(gltfSavePath, "/")
+	tempPath := server.Config.Path.PublicDir + "/" + tempDir[0]
+	if _, err := os.Stat(physicalPath); os.IsNotExist(err) {
+		os.MkdirAll(physicalPath, 0755)
+	}
+	targetPath := filepath.Join(physicalPath, "model.gltf")
 	target, err := os.Create(targetPath)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
@@ -159,7 +167,7 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	model, err := gltf.Open("public/" + doc.URL)
+	model, err := gltf.Open(targetPath)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -223,19 +231,18 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return images[i].Index < images[j].Index
 	})
 
-	savePath := server.MapPath(doc.SavePath)
 	jsonFile := map[string]interface{}{
 		"positions":  resultPositions,
 		"materials":  images,
 		"export_map": exportMap,
 	}
 	// check if the file exists.
-	_, err = os.Stat(physicalPath + "/gltf/" + "icon.png")
+	_, err = os.Stat(physicalPath + "icon.png")
 	if err == nil {
 		jsonFile["icon"] = "icon.png"
 	}
 	// check if the file exists.
-	_, err = os.Stat(physicalPath + "/gltf/" + "top_icon.png")
+	_, err = os.Stat(physicalPath + "top_icon.png")
 	if err == nil {
 		jsonFile["top_icon"] = "top_icon.png"
 	}
@@ -248,7 +255,7 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// save jsonString to savePath.
-	err = helper.SaveFile(savePath+"/gltf/info.json", jsonString)
+	err = helper.SaveFile(physicalPath+"/info.json", jsonString)
 	if err != nil {
 		helper.WriteJSON(w, server.Result{
 			Code: 300,
@@ -257,9 +264,9 @@ func Export(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := helper.TimeToString(time.Now(), "yyyyMMddHHmmss")
-	destFile := fmt.Sprintf(doc.SavePath+"/%v.zip", now)
+	destFile := fmt.Sprintf(gltfSavePath+"/%v.zip", now)
 	descPhysicalFile := server.MapPath(destFile)
-	err = helper.Zip2(savePath+"/gltf", descPhysicalFile)
+	err = helper.Zip2(physicalPath, descPhysicalFile)
 	if err != nil {
 		fmt.Println(err)
 		helper.WriteJSON(w, server.Result{
@@ -271,8 +278,58 @@ func Export(w http.ResponseWriter, r *http.Request) {
 	result := map[string]interface{}{
 		"path": destFile,
 	}
+	unUserSpace := utils.CalUnusedSpace(doc.ModelID)
+	var desFile, _ = os.Stat(descPhysicalFile)
+	remotePath := server.Config.CSServer.Path + gltfSavePath
+	brandID, err := utils.GetBrandID(doc.ModelID)
+	//url := strings.TrimPrefix(targetPath, "pubilc/")
+	newBrandFileLog := mModel.BrandFileLog{
+		Url:     destFile,
+		BrandId: brandID,
+		Size:    desFile.Size(),
+		Status:  screenshot.NORMAL,
+	}
+	if unUserSpace > desFile.Size() {
+		err := helper.TransferModelFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, descPhysicalFile, remotePath, server.Config.CSServer.Port)
+		if err != nil {
+			helper.WriteJSON(w, server.Result{
+				Code: 500,
+				Msg:  "上传云空间失败!",
+			})
+		} else {
+			var zipPath string
+			mysql.Table("fa_mesh").Select("zip_path").Where("model_id = ?", doc.ModelID).Find(&zipPath)
+			if len(zipPath) == 0 {
+				mysql.Table("fa_mesh").Where("model_id = ?", doc.ModelID).Update("zip_path", destFile)
+				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+			} else {
+				remoteDeleteFilePath := server.Config.CSServer.Path + zipPath
+				mysql.Table("fa_mesh").Where("model_id = ?", doc.ModelID).Update("zip_path", destFile)
+				mysql.Table("fa_brand_file_log").Where("url = ? and brand_id = ?", zipPath, brandID).Update("status", screenshot.DELETE)
+				mysql.Table("fa_brand_file_log").Create(&newBrandFileLog)
+				err = helper.DeleteRemoteFile(server.Config.CSServer.UserName, server.Config.CSServer.Password, server.Config.CSServer.Address, remoteDeleteFilePath, server.Config.CSServer.Port)
+				if err == nil {
+					fmt.Println("云空间文件删除成功~")
+				}
+			}
+		}
+	} else {
+		helper.WriteJSON(w, server.Result{
+			Code: 500,
+			Msg:  "fail!",
+			Data: "云空间内存不足，请购买！",
+		})
+	}
+	os.RemoveAll(tempPath)
+	fmt.Println("本地文件删除成功~")
 
-	mysql.Table(server.MeshCollectionName).Where("id = ?", _id).Updates(result)
+	useSpace, _ := utils.GetUsedSpace(doc.ModelID)
+	storeSize, err := utils.GetBrandFileLog(targetPath)
+	if err != nil {
+		fmt.Println(err)
+	}
+	totalUseSpace := useSpace - storeSize + desFile.Size()
+	mysql.Table("fa_brand_space").Where("brand_id", brandID).Update("use_number", totalUseSpace)
 
 	helper.WriteJSON(w, server.Result{
 		Code: 200,

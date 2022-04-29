@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-
 	"shadoweditor/helper"
 
 	"github.com/dimfeld/httptreemux"
@@ -54,7 +53,6 @@ func Start() {
 	handler.Use(negroni.HandlerFunc(GZipMiddleware))
 	handler.Use(negroni.HandlerFunc(ValidateTokenMiddleware))
 	handler.UseHandler(mux)
-
 	srv := http.Server{Addr: Config.Server.Port, Handler: handler}
 	idleConnsClosed := make(chan struct{})
 

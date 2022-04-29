@@ -14,15 +14,17 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/mozillazg/go-pinyin v0.18.0
-	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/otiai10/copy v1.7.0
+	github.com/pkg/errors v0.9.1
+	github.com/pkg/sftp v1.10.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/urfave/negroni v1.0.0
 	go.mongodb.org/mongo-driver v1.8.0
-	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63 // indirect
+	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881
 	golang.org/x/text v0.3.7
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

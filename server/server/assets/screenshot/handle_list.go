@@ -2,6 +2,7 @@ package screenshot
 
 import (
 	"net/http"
+	"shadoweditor/server/assets/model"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -71,7 +72,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 		db.FindAll(server.ScreenshotCollectionName, &docs, &opts)
 	}
 
-	list := []Model{}
+	list := []model.ScreenModel{}
 
 	for _, i := range docs {
 		doc := i.(primitive.D).Map()
@@ -90,7 +91,7 @@ func List(w http.ResponseWriter, r *http.Request) {
 
 		thumbnail, _ := doc["Thumbnail"].(string)
 
-		info := Model{
+		info := model.ScreenModel{
 			ID:           doc["ID"].(primitive.ObjectID).Hex(),
 			Name:         doc["Name"].(string),
 			CategoryID:   categoryID,

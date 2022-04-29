@@ -3,26 +3,27 @@ package mesh
 import (
 	"fmt"
 	"net/http"
-
 	"shadoweditor/helper"
 	"shadoweditor/server"
+	"shadoweditor/server/assets/model"
 )
 
 func init() {
 	server.Handle(http.MethodGet, "/api/Mesh/List", List, server.ListMesh)
 }
 
-const URL = "https://cloudSpace.test.miaoxiang.co/"
+//const URL = "https://cloudSpace.test.miaoxiang.co/" // 测试环境
+const URL = "http://120.26.47.168:81/" // 生产环境
 
 // List returns the mesh list.
 func List(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 
 	mysql := server.Mysql()
-	mysql.Table(server.MeshCollectionName).AutoMigrate(&Model{})
+	mysql.Table(server.MeshCollectionName).AutoMigrate(&model.MeshModel{})
 
-	listsbefore := []Model{}
-	listsAfter := []Model{}
+	listsbefore := []model.MeshModel{}
+	listsAfter := []model.MeshModel{}
 	// CreatedAt
 	err := mysql.Table(server.MeshCollectionName).Order("created_at DESC").Find(&listsbefore).Error
 	if err != nil {

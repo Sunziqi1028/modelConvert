@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"shadoweditor/server/assets/model"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ func init() {
 // Add upload a mesh.
 func Add(w http.ResponseWriter, r *http.Request) {
 	mysql := server.Mysql()
-	mysql.Table(server.MeshCollectionName).AutoMigrate(&Model{})
+	mysql.Table(server.MeshCollectionName).AutoMigrate(&model.MeshModel{})
 	r.ParseMultipartForm(server.Config.Upload.MaxSize)
 	files := r.MultipartForm.File
 
@@ -95,7 +96,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url := filepath.Join(savePath, "gltf", fmt.Sprintf("%s.gltf", fileNameWithoutExt))
-	model := Model{
+	model := model.MeshModel{
 		AddTime:     now,
 		FileName:    fileName,
 		FileSize:    fileSize,
