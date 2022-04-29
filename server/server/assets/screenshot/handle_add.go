@@ -85,6 +85,7 @@ func Add(w http.ResponseWriter, r *http.Request) {
 	NewModel = FaIconModels{
 		IconName:  file.Filename,
 		IconPath:  iconName,
+		ModelID:   doc.ModelID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}

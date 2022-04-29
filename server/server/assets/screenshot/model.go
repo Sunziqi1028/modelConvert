@@ -34,5 +34,6 @@ type FaIconModels struct {
 	IconPath  string     `gorm:"icon_path"`
 	CreatedAt time.Time  `gorm:"created_at"`
 	UpdatedAt time.Time  `gorm:"updated_at"`
+	ModelID   int64      `gorm:"model_id"`
 	DeletedAt *time.Time `gorm:"deleted_at"`
 }
