@@ -84,7 +84,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer target.Close()
-
 	mysql.AutoMigrate(&model.FaIconModels{})
 	iconPathTemp := strings.Trim(targetPath, "public/")
 	var NewModel model.FaIconModels
